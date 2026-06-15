@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天气仪表盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-warm: #fb923c;
+            --accent-rain: #60a5fa;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            padding: 16px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ===== 搜索栏 ===== */
+        .search-bar {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .search-bar:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+        }
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 14px 18px;
+            font-size: 1rem;
+            color: var(--text);
+            outline: none;
+            font-family: inherit;
+        }
+        .search-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+        .search-btn {
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 14px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            font-family: inherit;
+            letter-spacing: 0.02em;
+            transition: background 0.15s;
+        }
+        .search-btn:hover { background: #7dd3fc; }
+        .search-btn:active { background: #38bdf8; }
+
+        .search-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            margin-top: -12px;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        /* ===== 头部 ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header .location {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .time-badge {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+        }
+
+        /* ===== 加载动画 ===== */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active { display: flex; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status-msg {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.8rem;
+            color: var(--accent);
+            min-height: 20px;
+            transition: opacity 0.3s;
+        }
+
+        /* ===== 网格 ===== */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        .card-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .card-full { grid-column: 1 / -1; }
+
+        /* Windy */
+        .windy-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%;
+        }
+        .windy-container iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+            border-radius: 8px;
+        }
+
+        /* 实时天气 */
+        .current-weather {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .cw-temp {
+            font-size: 4rem;
+            font-weight: 200;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+        .cw-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .cw-details span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cw-status {
+            font-size: 1.1rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* 图表 */
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+        .chart-wrapper canvas { width: 100% !important; height: 100% !important; }
+
+        /* 链接按钮 */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+        }
+        .link-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+        .link-btn:hover {
+            border-color: var(--accent);
+            background: #1a2a3a;
+        }
+        .link-btn .emoji { font-size: 1.1rem; }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            padding-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .cw-temp { font-size: 3rem; }
+            .header h1 { font-size: 1.2rem; }
+            .chart-wrapper { height: 240px; }
+            .search-btn { padding: 14px 16px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+        <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="输入城市名，如：长沙 / 北京 / 东京 / New York ..."
+            autocomplete="off"
+        >
+        <button class="search-btn" id="searchBtn">🔍 搜索</button>
+    </div>
+    <div class="search-hint">💡 支持中文/英文/拼音 · 全球城市均可搜索</div>
+    <div class="status-msg" id="statusMsg"></div>
+
+    <!-- 头部 -->
+    <div class="header">
+        <div>
+            <h1>🌤️ 天气仪表盘 <span class="location" id="locationTag">—</span></h1>
+        </div>
+        <div class="time-badge" id="clock">--</div>
+    </div>
+
+    <!-- 主网格 -->
+    <div class="grid">
+
+        <!-- 实时天气 -->
+        <div class="card" id="current-card">
+            <div class="card-title">📍 实时天气 · <span id="cw-city">—</span></div>
+            <div class="current-weather">
+                <div class="cw-temp" id="cw-temp">--°</div>
+                <div class="cw-details">
+                    <div class="cw-status" id="cw-status">请输入城市</div>
+                    <span>💨 风速 <strong id="cw-wind">--</strong></span>
+                    <span>💧 湿度 <strong id="cw-humidity">--</strong></span>
+                    <span>🕐 更新时间 <strong id="cw-time">--</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速链接 -->
+        <div class="card">
+            <div class="card-title">🔗 快速入口</div>
+            <div class="links-grid">
+                <a href="https://www.caiyunapp.com/" target="_blank" class="link-btn" rel="noopener">
+                    <span class="emoji">🌧️</span> 彩云天气
+                </a>
+                <a href="http://www.nmc.cn/publish/radar/mosaic.html" target="_blank" class="link-btn" rel="noopener">
+                    <span class="emoji">📡</span> 雷达拼图
+                </a>
+                <a href="https://zoom.earth/" target="_blank" class="link-btn" rel="noopener">
+                    <span class="emoji">🛰️</span> 卫星云图
+                </a>
+                <a href="https://www.windy.com/" target="_blank" class="link-btn" rel="noopener" id="windyLink">
+                    <span class="emoji">💨</span> Windy完整版
+                </a>
+                <a href="https://typhoon.nmc.cn/web.html" target="_blank" class="link-btn" rel="noopener">
+                    <span class="emoji">🌀</span> 台风路径
+                </a>
+                <a href="https://www.weather.com.cn/" target="_blank" class="link-btn" rel="noopener">
+                    <span class="emoji">🏛️</span> 中国天气网
+                </a>
+            </div>
+        </div>
+
+        <!-- Windy -->
+        <div class="card card-full">
+            <div class="card-title">🗺️ Windy 交互地图 · 可切换风/雨/温度/卫星图层</div>
+            <div class="windy-container">
+                <iframe
+                    id="windyFrame"
+                    src="about:blank"
+                    title="Windy天气地图"
+                    loading="lazy"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                ></iframe>
+            </div>
+        </div>
+
+        <!-- 7天图表 -->
+        <div class="card card-full">
+            <div class="card-title">📊 7 天预报（Open-Meteo 免费全球模式）</div>
+            <div class="chart-wrapper">
+                <canvas id="forecastChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        🛠️ 私人天气仪表盘 · 数据源：Open-Meteo & Windy · 仅供参考，重要决策请以官方气象台发布为准
+    </div>
+
+    <script>
+    // ==================== 全局状态 ====================
+    const state = {
+        lat: 28.23,
+        lon: 112.94,
+        cityName: '长沙',
+        country: '中国',
+        timezone: 'Asia/Shanghai',
+    };
+
+    // ==================== DOM 引用 ====================
+    const $ = id => document.getElementById(id);
+    const searchInput = $('searchInput');
+    const searchBtn = $('searchBtn');
+    const statusMsg = $('statusMsg');
+    const locationTag = $('locationTag');
+    const windyFrame = $('windyFrame');
+    const windyLink = $('windyLink');
+    const loadingOverlay = $('loadingOverlay');
+
+    // ==================== 时钟 ====================
+    function updateClock() {
+        const now = new Date();
+        $('clock').textContent = now.toLocaleString('zh-CN', { hour12: false });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ==================== 地理编码：城市名 → 坐标 ====================
+    async function geocode(cityName) {
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=5&language=zh&format=json`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('地理编码请求失败');
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) {
+            throw new Error(`找不到"${cityName}"，请检查城市名拼写`);
+        }
+
+        // 优先选人口最多的（通常也是最主要的那个）
+        const best = data.results.reduce((a, b) => (b.population || 0) > (a.population || 0) ? b : a);
+
+        return {
+            lat: best.latitude,
+            lon: best.longitude,
+            name: best.name || cityName,
+            country: best.country || '',
+            timezone: best.timezone || 'UTC',
+            admin1: best.admin1 || '', // 省/州
+        };
+    }
+
+    // ==================== 设置 Windy ====================
+    function updateWindy(lat, lon) {
+        const src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=8&level=surface&overlay=rain&menu=&message=&marker=&calendar=&pressure=&type=map&location=coordinates&detailLat=${lat}&detailLon=${lon}&metricWind=default&metricTemp=default&radarRange=-1`;
+        windyFrame.src = src;
+        windyLink.href = `https://www.windy.com/?${lat},${lon},8`;
+    }
+
+    // ==================== 天气码 → 描述 ====================
+    const weatherMap = {
+        0: '☀️ 晴', 1: '🌤️ 大部晴', 2: '⛅ 多云', 3: '☁️ 阴',
+        45: '🌫️ 雾', 48: '🌫️ 雾凇',
+        51: '🌦️ 小毛毛雨', 53: '🌦️ 毛毛雨', 55: '🌦️ 大毛毛雨',
+        61: '🌧️ 小雨', 63: '🌧️ 中雨', 65: '🌧️ 大雨',
+        71: '❄️ 小雪', 73: '❄️ 中雪', 75: '❄️ 大雪',
+        80: '🌦️ 阵雨', 81: '🌧️ 中阵雨', 82: '⛈️ 大阵雨',
+        95: '⛈️ 雷暴', 96: '⛈️ 冰雹雷暴', 99: '⛈️ 强冰雹雷暴'
+    };
+
+    // ==================== 获取实时天气 ====================
+    async function fetchCurrentWeather(lat, lon, tz) {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=${encodeURIComponent(tz)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('天气数据获取失败');
+        const data = await res.json();
+        const cw = data.current_weather;
+
+        $('cw-temp').textContent = Math.round(cw.temperature) + '°';
+        $('cw-wind').textContent = cw.windspeed + ' km/h';
+        $('cw-time').textContent = new Date(cw.time).toLocaleTimeString('zh-CN', {
+            timeZone: tz, hour: '2-digit', minute: '2-digit'
+        });
+        $('cw-status').textContent = weatherMap[cw.weathercode] || '—';
+
+        return cw.weathercode; // 可用于后续判断
+    }
+
+    // ==================== 获取湿度 ====================
+    async function fetchHumidity(lat, lon, tz) {
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=relativehumidity_2m&timezone=${encodeURIComponent(tz)}&forecast_hours=1`;
+            const res = await fetch(url);
+            const data = await res.json();
+            $('cw-humidity').textContent = data.hourly.relativehumidity_2m[0] + '%';
+        } catch {
+            $('cw-humidity').textContent = '--';
+        }
+    }
+
+    // ==================== 获取7天预报 + 画图 ====================
+    async function fetchForecast(lat, lon, tz) {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=${encodeURIComponent(tz)}&forecast_days=7`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('预报数据获取失败');
+        const data = await res.json();
+        const daily = data.daily;
+
+        const labels = daily.time.map(t => {
+            const d = new Date(t + 'T00:00:00');
+            return (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+                ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+        });
+
+        const ctx = $('forecastChart').getContext('2d');
+        if (window._forecastChart) window._forecastChart.destroy();
+
+        window._forecastChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: '最高温 (°C)',
+                        data: daily.temperature_2m_max,
+                        backgroundColor: 'rgba(251, 146, 60, 0.6)',
+                        borderColor: '#fb923c',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        order: 2,
+                    },
+                    {
+                        label: '最低温 (°C)',
+                        data: daily.temperature_2m_min,
+                        backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                        borderColor: '#38bdf8',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        order: 2,
+                    },
+                    {
+                        label: '降水量 (mm)',
+                        data: daily.precipitation_sum,
+                        type: 'line',
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#60a5fa',
+                        tension: 0.3,
+                        yAxisID: 'y1',
+                        order: 1,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: '#94a3b8', usePointStyle: true, padding: 20, font: { size: 12 } }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#cbd5e1',
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.dataset.yAxisID === 'y1') return '降水量: ' + ctx.raw + ' mm';
+                                return ctx.dataset.label.replace(' (°C)', '') + ': ' + ctx.raw + '°C';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 11 } },
+                        grid: { color: 'rgba(148, 163, 184, 0.08)' },
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: '温度 °C', color: '#94a3b8', font: { size: 11 } },
+                        ticks: { color: '#94a3b8', callback: v => v + '°' },
+                        grid: { color: 'rgba(148, 163, 184, 0.08)' },
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: '降水量 mm', color: '#94a3b8', font: { size: 11 } },
+                        ticks: { color: '#94a3b8' },
+                        grid: { display: false },
+                        min: 0,
+                    }
+                }
+            }
+        });
+    }
+
+    // ==================== 主流程：切换城市 ====================
+    async function loadCity(query) {
+        if (!query || !query.trim()) return;
+
+        const q = query.trim();
+        showLoading(true);
+        setStatus('🔍 正在搜索：' + q + ' ...');
+
+        try {
+            // 1. 地理编码
+            const geo = await geocode(q);
+
+            // 2. 更新状态
+            state.lat = geo.lat;
+            state.lon = geo.lon;
+            state.cityName = geo.name;
+            state.country = geo.country;
+            state.timezone = geo.timezone;
+
+            // 3. 更新 UI 标题
+            const fullName = geo.admin1 ? `${geo.name}, ${geo.admin1}, ${geo.country}` : `${geo.name}, ${geo.country}`;
+            locationTag.textContent = fullName;
+            $('cw-city').textContent = geo.name;
+            document.title = `${geo.name} 天气仪表盘`;
+
+            // 4. 更新 Windy
+            updateWindy(geo.lat, geo.lon);
+
+            setStatus('⏳ 正在获取天气数据...');
+
+            // 5. 并行请求天气数据
+            await Promise.all([
+                fetchCurrentWeather(geo.lat, geo.lon, geo.timezone),
+                fetchHumidity(geo.lat, geo.lon, geo.timezone),
+                fetchForecast(geo.lat, geo.lon, geo.timezone),
+            ]);
+
+            setStatus('✅ ' + fullName + ' · 数据加载完成');
+            setTimeout(() => setStatus(''), 3000);
+
+            // 保存到 localStorage
+            saveRecent(q);
+
+        } catch (err) {
+            console.error(err);
+            setStatus('❌ ' + err.message);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // ==================== 最近搜索 ====================
+    function saveRecent(query) {
+        try {
+            let recents = JSON.parse(localStorage.getItem('weather_recent') || '[]');
+            recents = [query, ...recents.filter(r => r !== query)].slice(0, 10);
+            localStorage.setItem('weather_recent', JSON.stringify(recents));
+        } catch {}
+    }
+
+    function loadLastCity() {
+        try {
+            const recents = JSON.parse(localStorage.getItem('weather_recent') || '[]');
+            return recents[0] || '长沙';
+        } catch {
+            return '长沙';
+        }
+    }
+
+    // ==================== 辅助函数 ====================
+    function showLoading(show) {
+        loadingOverlay.classList.toggle('active', show);
+    }
+
+    function setStatus(msg) {
+        statusMsg.textContent = msg;
+    }
+
+    // ==================== 事件绑定 ====================
+    searchBtn.addEventListener('click', () => loadCity(searchInput.value));
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loadCity(searchInput.value);
+    });
+
+    // ==================== 初始化 ====================
+    const initCity = loadLastCity();
+    searchInput.value = initCity;
+    loadCity(initCity);
+
+    // 每30分钟自动刷新
+    setInterval(() => {
+        if (state.lat !== null) {
+            setStatus('🔄 自动刷新中...');
+            Promise.all([
+                fetchCurrentWeather(state.lat, state.lon, state.timezone),
+                fetchHumidity(state.lat, state.lon, state.timezone),
+                fetchForecast(state.lat, state.lon, state.timezone),
+            ]).then(() => {
+                setStatus('✅ 自动刷新完成 · ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+                setTimeout(() => setStatus(''), 3000);
+            }).catch(err => {
+                setStatus('⚠️ 自动刷新失败，下次重试');
+                console.error(err);
+            });
+        }
+    }, 30 * 60 * 1000);
+    </script>
+</body>
+</html>
