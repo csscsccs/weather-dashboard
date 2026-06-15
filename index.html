@@ -31,8 +31,6 @@
             max-width: 1200px;
             margin: 0 auto;
         }
-
-        /* 搜索栏 */
         .search-bar {
             display: flex;
             gap: 0;
@@ -90,8 +88,6 @@
             color: var(--accent);
             min-height: 20px;
         }
-
-        /* 头部 */
         .header {
             display: flex;
             justify-content: space-between;
@@ -121,8 +117,6 @@
             color: var(--text-secondary);
             font-family: 'SF Mono', 'Consolas', monospace;
         }
-
-        /* 加载遮罩 */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -151,8 +145,6 @@
                 transform: rotate(360deg);
             }
         }
-
-        /* 网格 */
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -205,8 +197,6 @@
             border-color: var(--accent);
             background: rgba(56, 189, 248, 0.1);
         }
-
-        /* 实时天气 */
         .current-weather {
             display: flex;
             align-items: center;
@@ -237,15 +227,12 @@
             font-weight: 500;
         }
 
-        /* 嵌入式面板 iframe 容器 */
+        /* 嵌入面板 */
         .embed-container {
             position: relative;
             width: 100%;
             height: 0;
             padding-bottom: 75%;
-        }
-        .embed-container.square {
-            padding-bottom: 100%;
         }
         .embed-container.wide {
             padding-bottom: 50%;
@@ -285,11 +272,28 @@
             font-weight: 500;
         }
 
-        /* 图表 */
+        /* 分钟降水 */
+        .minutely-desc {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            text-align: center;
+            padding: 6px 0 4px;
+        }
+        .minutely-sub {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
         .chart-wrapper {
             position: relative;
             width: 100%;
             height: 280px;
+        }
+        .chart-wrapper.mini {
+            height: 240px;
         }
         .chart-wrapper canvas {
             width: 100% !important;
@@ -340,18 +344,17 @@
             .chart-wrapper {
                 height: 220px;
             }
+            .chart-wrapper.mini {
+                height: 200px;
+            }
             .embed-container {
                 padding-bottom: 60%;
-            }
-            .embed-container.square {
-                padding-bottom: 70%;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- 加载遮罩 -->
     <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 
     <!-- 搜索栏 -->
@@ -392,26 +395,22 @@
             </div>
         </div>
 
-        <!-- ② 卫星云图（替代原来的快速入口卡片） -->
+        <!-- ② 卫星云图 -->
         <div class="card">
             <div class="card-title">
                 🛰️ 卫星云图
-                <span class="badge" id="satBadge">Himawari-8 实时</span>
+                <span class="badge" id="satBadge">Zoom Earth</span>
             </div>
             <div class="embed-container" id="satContainer">
-                <!-- 优先用 zoom.earth embed，被拦截则降级到 Himawari-8 图片 -->
-                <iframe id="satIframe"
-                src="about:blank"
-                title="卫星云图"
-                loading="lazy"
-                sandbox="allow-scripts allow-same-origin allow-popups"
+                <iframe id="satIframe" src="about:blank" title="卫星云图"
+                loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups"
                 style="display:none;">
             </iframe>
             <img id="satImage" src="" alt="卫星云图" style="display:none;">
             <div class="embed-fallback" id="satFallback">
                 <span>🛰️</span>
-                <span>卫星云图加载中...</span>
-                <a href="https://zoom.earth/" target="_blank" rel="noopener">在 Zoom Earth 打开 →</a>
+                <span>卫星云图加载中…</span>
+                <a href="https://zoom.earth/" target="_blank" rel="noopener">Zoom Earth 打开 →</a>
             </div>
         </div>
     </div>
@@ -422,62 +421,47 @@
             📡 雷达回波图
             <span class="badge">实时</span>
         </div>
-        <div class="embed-container" id="radarContainer">
-            <iframe id="radarFrame"
-            src="about:blank"
-            title="雷达回波图"
-            loading="lazy"
-            sandbox="allow-scripts allow-same-origin allow-popups">
+        <div class="embed-container">
+            <iframe id="radarFrame" src="about:blank" title="雷达回波图"
+            loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups">
         </iframe>
         <div class="embed-fallback" id="radarFallback" style="display:none;">
             <span>📡</span>
             <span>雷达图加载失败</span>
-            <a href="http://www.nmc.cn/publish/radar/mosaic.html" target="_blank" rel="noopener">在气象台雷达页打开 →</a>
+            <a href="http://www.nmc.cn/publish/radar/mosaic.html" target="_blank" rel="noopener">气象台雷达页 →</a>
         </div>
     </div>
 </div>
 
-<!-- ④ 分钟级降水（彩云天气） -->
+<!-- ④ 分钟级降水（彩云 API → 自绘图表） -->
 <div class="card">
     <div class="card-title">
         🌧️ 分钟级降水预报
-        <span class="badge">彩云天气</span>
+        <span class="badge" id="rainBadge">彩云 API</span>
     </div>
-    <div class="embed-container" id="rainContainer">
-        <iframe id="rainFrame"
-        src="about:blank"
-        title="分钟级降水"
-        loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-popups">
-    </iframe>
-    <div class="embed-fallback" id="rainFallback" style="display:none;">
-        <span>🌧️</span>
-        <span>彩云地图无法嵌入</span>
-        <a href="https://map.caiyunapp.com/" target="_blank" rel="noopener">在彩云天气打开 →</a>
-        <span style="font-size:0.7rem;opacity:0.6;">（最准的2小时内逐分钟降雨预测）</span>
+    <div class="minutely-desc" id="rainDesc">加载中…</div>
+    <div class="minutely-sub" id="rainSub"></div>
+    <div class="chart-wrapper mini">
+        <canvas id="rainChart"></canvas>
     </div>
-</div>
 </div>
 
-<!-- ⑤ Windy 交互地图（全宽） -->
+<!-- ⑤ Windy 交互地图 -->
 <div class="card card-full">
     <div class="card-title">
         🗺️ Windy 交互地图
         <span class="badge">拖拽 · 缩放 · 切换图层</span>
     </div>
     <div class="embed-container wide">
-        <iframe id="windyFrame"
-        src="about:blank"
-        title="Windy天气地图"
-        loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-popups">
+        <iframe id="windyFrame" src="about:blank" title="Windy"
+        loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups">
     </iframe>
 </div>
 </div>
 
 <!-- ⑥ 7天预报 -->
 <div class="card card-full">
-    <div class="card-title">📊 7 天预报（Open-Meteo · 免费全球模式 · ~22km）</div>
+    <div class="card-title">📊 7 天预报（Open-Meteo · ~22km）</div>
     <div class="chart-wrapper">
         <canvas id="forecastChart"></canvas>
     </div>
@@ -490,10 +474,10 @@
     <a href="https://typhoon.nmc.cn/web.html" target="_blank" rel="noopener">🌀 台风路径</a>
     <a href="https://www.weather.com.cn/" target="_blank" rel="noopener">🏛️ 中国天气网</a>
     <a href="https://www.windy.com/" target="_blank" rel="noopener" id="windyLink">💨 Windy 完整版</a>
-    <a href="https://www.caiyunapp.com/" target="_blank" rel="noopener">🌧️ 彩云天气 App</a>
+    <a href="https://www.caiyunapp.com/" target="_blank" rel="noopener">🌧️ 彩云 App</a>
 </div>
 <div class="footer">
-    🛠️ 私人天气仪表盘 · 地理编码 Nominatim · 天气数据 Open-Meteo · 卫星 Himawari-8/Zoom Earth
+    🛠️ 私人天气仪表盘 · 地理编码 Nominatim · 天气 Open-Meteo · 分钟降水 彩云 API · 卫星 Zoom Earth/Himawari-8
     · 仅供参考
 </div>
 
@@ -507,7 +491,6 @@
         timezone: 'Asia/Shanghai',
         isDistrict: false,
     };
-
     const $ = id => document.getElementById(id);
 
     // ==================== 时钟 ====================
@@ -517,469 +500,212 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ==================== 地理编码：Nominatim ====================
+    // ==================== 地理编码（Nominatim） ====================
     async function geocode(cityName) {
         const url =
-            `https://nominatim.openstreetmap.org/search?` +
-            `q=${encodeURIComponent(cityName)}` +
-            `&format=jsonv2&limit=5&addressdetails=1&accept-language=zh`;
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&format=jsonv2&limit=5&addressdetails=1&accept-language=zh`;
         const res = await fetch(url);
-        if (!res.ok) throw new Error('地理编码请求失败（HTTP ' + res.status + '）');
+        if (!res.ok) throw new Error('地理编码失败（HTTP ' + res.status + '）');
         const results = await res.json();
-        if (!results || results.length === 0) {
-            throw new Error(`找不到"${cityName}"，请检查拼写或尝试更简短的地名`);
-        }
-
-        const typeScore = {
-            'district': 10,
-            'county': 10,
-            'city': 8,
-            'town': 7,
-            'administrative': 7,
-            'state': 6,
-            'suburb': 5,
-            'village': 4,
-            'municipality': 8,
-        };
-        let best = results[0];
-        let bestScore = -1;
+        if (!results || results.length === 0) throw new Error(`找不到"${cityName}"，请检查拼写`);
+        const typeScore = { district: 10, county: 10, city: 8, town: 7, administrative: 7, state: 6,
+            suburb: 5, village: 4, municipality: 8 };
+        let best = results[0],
+            bestScore = -1;
         for (const r of results) {
-            const osmType = (r.addresstype || '').toLowerCase();
-            const catScore = typeScore[osmType] || 3;
-            const importance = r.importance || 0;
-            const score = catScore * 10 + importance * 5;
-            if (score > bestScore) { bestScore = score;
+            const s = (typeScore[(r.addresstype || '').toLowerCase()] || 3) * 10 + (r.importance || 0) * 5;
+            if (s > bestScore) { bestScore = s;
                 best = r; }
         }
-
         const addr = best.address || {};
         const district = addr.district || addr.county || addr.city_district || '';
         const city = addr.city || addr.town || addr.municipality || '';
-        const state = addr.state || addr.province || '';
+        const stateP = addr.state || addr.province || '';
         const country = addr.country || '';
         const isDistrict = /[区县镇乡]$/.test(cityName.trim());
-
         let displayName;
         if (isDistrict && district) displayName = district;
         else if (district && city && cityName.includes(city)) displayName = city;
         else if (city) displayName = city;
         else if (district) displayName = district;
         else displayName = best.name || cityName;
-
         const parts = [];
         if (displayName && !parts.includes(displayName)) parts.push(displayName);
         if (city && city !== displayName && !parts.includes(city)) parts.push(city);
-        if (state && !parts.includes(state)) parts.push(state);
+        if (stateP && !parts.includes(stateP)) parts.push(stateP);
         if (country && !parts.includes(country)) parts.push(country);
         const fullLocation = parts.join(', ');
-
         let timezone = 'UTC';
         try {
-            const tzUrl =
-                `https://api.open-meteo.com/v1/forecast?latitude=${best.lat}&longitude=${best.lon}&current_weather=true&timezone=auto`;
-            const tzRes = await fetch(tzUrl);
-            const tzData = await tzRes.json();
-            timezone = tzData.timezone || 'UTC';
-        } catch {
-            if (best.lat > 18 && best.lat < 54 && best.lon > 73 && best.lon < 135) timezone = 'Asia/Shanghai';
-        }
-
-        return {
-            lat: parseFloat(best.lat),
-            lon: parseFloat(best.lon),
-            name: displayName,
-            country,
-            state,
-            city,
-            district,
-            timezone,
-            fullLocation,
-            isDistrict,
-        };
+            const tzRes = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${best.lat}&longitude=${best.lon}&current_weather=true&timezone=auto`
+                );
+            timezone = (await tzRes.json()).timezone || 'UTC';
+        } catch { if (best.lat > 18 && best.lat < 54 && best.lon > 73 && best.lon < 135) timezone =
+            'Asia/Shanghai'; }
+        return { lat: +best.lat, lon: +best.lon, name: displayName, country, state: stateP, city, district,
+            timezone, fullLocation, isDistrict };
     }
 
-    // ==================== 设置所有嵌入式面板 ====================
+    // ==================== 嵌入式面板 ====================
     function updateEmbeds(lat, lon, isDistrict) {
         const zoom = isDistrict ? 11 : 8;
-
-        // --- Windy 主地图 ---
-        const windySrc =
-            `https://embed.windy.com/embed2.html?` +
-            `lat=${lat}&lon=${lon}&zoom=${zoom}` +
-            `&level=surface&overlay=rain` +
-            `&menu=&message=&marker=&calendar=&pressure=` +
-            `&type=map&location=coordinates` +
-            `&detailLat=${lat}&detailLon=${lon}` +
-            `&metricWind=default&metricTemp=default&radarRange=-1`;
-        $('windyFrame').src = windySrc;
+        // Windy 主地图
+        $('windyFrame').src =
+            `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=${zoom}&level=surface&overlay=rain&menu=&message=&marker=&calendar=&pressure=&type=map&location=coordinates&detailLat=${lat}&detailLon=${lon}&metricWind=default&metricTemp=default&radarRange=-1`;
         $('windyLink').href = `https://www.windy.com/?${lat},${lon},${zoom}`;
-
-        // --- 雷达回波图：Windy 雷达图层，更近的缩放 ---
-        const radarZoom = isDistrict ? 11 : 9;
-        const radarSrc =
-            `https://embed.windy.com/embed2.html?` +
-            `lat=${lat}&lon=${lon}&zoom=${radarZoom}` +
-            `&level=surface&overlay=rain` +
-            `&menu=&message=&marker=&calendar=&pressure=false` +
-            `&type=map&location=coordinates` +
-            `&detailLat=${lat}&detailLon=${lon}` +
-            `&metricWind=default&metricTemp=default&radarRange=-1`;
-        $('radarFrame').src = radarSrc;
-        // 如果雷达 iframe 加载失败，显示降级方案
-        $('radarFrame').onerror = () => {
-            $('radarFrame').style.display = 'none';
-            $('radarFallback').style.display = 'flex';
-        };
-        $('radarFrame').onload = () => {
-            $('radarFrame').style.display = '';
-            $('radarFallback').style.display = 'none';
-        };
-
-        // --- 分钟级降水：彩云天气地图 ---
-        const rainSrc = `https://map.caiyunapp.com/#lat=${lat}&lon=${lon}&zoom=${zoom}&type=rain`;
-        $('rainFrame').src = rainSrc;
-        $('rainFrame').onerror = () => {
-            $('rainFrame').style.display = 'none';
-            $('rainFallback').style.display = 'flex';
-        };
-        $('rainFrame').onload = () => {
-            $('rainFrame').style.display = '';
-            $('rainFallback').style.display = 'none';
-        };
-
-        // --- 卫星云图 ---
-        // 方案 A：尝试 zoom.earth embed
-        const satZoom = isDistrict ? 10 : 7;
-        const satSrc = `https://zoom.earth/#view=${lat},${lon},${satZoom}z`;
-        const satIframe = $('satIframe');
-        const satImage = $('satImage');
-        const satFallback = $('satFallback');
-        const satBadge = $('satBadge');
-
-        // 先用 zoom.earth（可能被 X-Frame-Options 拦截）
+        // 雷达
+        const rZoom = isDistrict ? 11 : 9;
+        $('radarFrame').src =
+            `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=${rZoom}&level=surface&overlay=rain&menu=&message=&marker=&calendar=&pressure=false&type=map&location=coordinates&detailLat=${lat}&detailLon=${lon}&metricWind=default&metricTemp=default&radarRange=-1`;
+        $('radarFrame').onload = () => { $('radarFallback').style.display = 'none'; };
+        $('radarFrame').onerror = () => { $('radarFallback').style.display = 'flex'; };
+        // 卫星
+        const sZoom = isDistrict ? 10 : 7;
+        const satSrc = `https://zoom.earth/#view=${lat},${lon},${sZoom}z`;
+        const satIframe = $('satIframe'),
+            satImg = $('satImage'),
+            satFb = $('satFallback'),
+            satBadge = $('satBadge');
         satIframe.src = satSrc;
         satIframe.style.display = '';
-        satImage.style.display = 'none';
-        satFallback.style.display = 'none';
+        satImg.style.display = 'none';
+        satFb.style.display = 'none';
         satBadge.textContent = 'Zoom Earth';
-
-        // 设置超时：如果 5 秒后 iframe 没加载出来，降级到 Himawari-8
-        const satTimeout = setTimeout(() => {
-            // 检查 iframe 是否真的加载了内容
-            // 如果被拦截，iframe 通常是空的
+        const t = setTimeout(() => {
             satIframe.style.display = 'none';
             satBadge.textContent = 'Himawari-8';
-            loadHimawariImage(lat, lon, satImage, satFallback);
+            loadHimawari(lat, lon, satImg, satFb);
         }, 4000);
-
-        satIframe.onload = () => {
-            clearTimeout(satTimeout);
-            // zoom.earth 加载成功
-            satBadge.textContent = 'Zoom Earth 实时';
-            satIframe.style.display = '';
-            satImage.style.display = 'none';
-            satFallback.style.display = 'none';
-        };
-        satIframe.onerror = () => {
-            clearTimeout(satTimeout);
+        satIframe.onload = () => { clearTimeout(t);
+            satBadge.textContent = 'Zoom Earth'; };
+        satIframe.onerror = () => { clearTimeout(t);
             satIframe.style.display = 'none';
             satBadge.textContent = 'Himawari-8';
-            loadHimawariImage(lat, lon, satImage, satFallback);
-        };
+            loadHimawari(lat, lon, satImg, satFb); };
     }
 
-    // --- Himawari-8 卫星图片（降级方案） ---
-    function loadHimawariImage(lat, lon, imgEl, fallbackEl) {
-        // Himawari-8 图片每10分钟更新，可用延迟约20分钟
+    function loadHimawari(lat, lon, img, fb) {
         const now = new Date();
-        // 取最近一个10分钟整点，减去20分钟延迟
         const utcMin = Math.floor((now.getUTCMinutes() - 20) / 10) * 10;
-        const rounded = new Date(now);
-        rounded.setUTCMinutes(utcMin < 0 ? utcMin + 60 : utcMin, 0, 0);
-        if (utcMin < 0) rounded.setUTCHours(rounded.getUTCHours() - 1);
-
-        const y = rounded.getUTCFullYear();
-        const m = String(rounded.getUTCMonth() + 1).padStart(2, '0');
-        const d = String(rounded.getUTCDate()).padStart(2, '0');
-        const h = String(rounded.getUTCHours()).padStart(2, '0');
-        const min = String(rounded.getUTCMinutes()).padStart(2, '0');
-        const ts = `${y}${m}${d}${h}${min}`;
-
-        // JMA Himawari-8 visible light, sector 1 (full disk)
-        const imgUrl = `https://www.jma.go.jp/jp/gms/imgs_c/visible/1/${ts}-00.png`;
-        imgEl.src = imgUrl;
-        imgEl.style.display = '';
-        fallbackEl.style.display = 'none';
-
-        imgEl.onerror = () => {
-            imgEl.style.display = 'none';
-            fallbackEl.style.display = 'flex';
-        };
-        imgEl.onload = () => {
-            imgEl.style.display = '';
-            fallbackEl.style.display = 'none';
-        };
+        const r = new Date(now);
+        r.setUTCMinutes(utcMin < 0 ? utcMin + 60 : utcMin, 0, 0);
+        if (utcMin < 0) r.setUTCHours(r.getUTCHours() - 1);
+        const ts = `${r.getUTCFullYear()}${String(r.getUTCMonth()+1).padStart(2,'0')}${String(r.getUTCDate()).padStart(2,'0')}${String(r.getUTCHours()).padStart(2,'0')}${String(r.getUTCMinutes()).padStart(2,'0')}`;
+        img.src = `https://www.jma.go.jp/jp/gms/imgs_c/visible/1/${ts}-00.png`;
+        img.style.display = '';
+        fb.style.display = 'none';
+        img.onerror = () => { img.style.display = 'none';
+            fb.style.display = 'flex'; };
     }
 
-    // ==================== 天气码 ====================
-    const weatherMap = {
-        0: '☀️ 晴',
-        1: '🌤️ 大部晴',
-        2: '⛅ 多云',
-        3: '☁️ 阴',
-        45: '🌫️ 雾',
-        48: '🌫️ 雾凇',
-        51: '🌦️ 小毛毛雨',
-        53: '🌦️ 毛毛雨',
-        55: '🌦️ 大毛毛雨',
-        61: '🌧️ 小雨',
-        63: '🌧️ 中雨',
-        65: '🌧️ 大雨',
-        71: '❄️ 小雪',
-        73: '❄️ 中雪',
-        75: '❄️ 大雪',
-        80: '🌦️ 阵雨',
-        81: '🌧️ 中阵雨',
-        82: '⛈️ 大阵雨',
-        95: '⛈️ 雷暴',
-        96: '⛈️ 冰雹雷暴',
-        99: '⛈️ 强冰雹雷暴',
-    };
+    // ==================== 天气数据 ====================
+    const weatherMap = { 0: '☀️ 晴', 1: '🌤️ 大部晴', 2: '⛅ 多云', 3: '☁️ 阴', 45: '🌫️ 雾', 48: '🌫️ 雾凇', 51: '🌦️ 小毛毛雨',
+        53: '🌦️ 毛毛雨', 55: '🌦️ 大毛毛雨', 61: '🌧️ 小雨', 63: '🌧️ 中雨', 65: '🌧️ 大雨', 71: '❄️ 小雪', 73: '❄️ 中雪',
+        75: '❄️ 大雪', 80: '🌦️ 阵雨', 81: '🌧️ 中阵雨', 82: '⛈️ 大阵雨', 95: '⛈️ 雷暴', 96: '⛈️ 冰雹雷暴', 99: '⛈️ 强冰雹雷暴' };
 
-    // ==================== 获取天气数据 ====================
     async function fetchCurrentWeather(lat, lon, tz) {
-        const url =
-            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=${encodeURIComponent(tz)}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('天气数据获取失败');
-        const data = await res.json();
-        const cw = data.current_weather;
+        const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=${encodeURIComponent(tz)}`
+            );
+        if (!res.ok) throw new Error('天气数据失败');
+        const cw = (await res.json()).current_weather;
         $('cw-temp').textContent = Math.round(cw.temperature) + '°';
         $('cw-wind').textContent = cw.windspeed + ' km/h';
-        $('cw-time').textContent = new Date(cw.time).toLocaleTimeString('zh-CN', {
-            timeZone: tz,
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        $('cw-time').textContent = new Date(cw.time).toLocaleTimeString('zh-CN', { timeZone: tz, hour: '2-digit',
+            minute: '2-digit' });
         $('cw-status').textContent = weatherMap[cw.weathercode] || '—';
     }
 
     async function fetchHumidity(lat, lon, tz) {
         try {
-            const url =
-                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=relativehumidity_2m&timezone=${encodeURIComponent(tz)}&forecast_hours=1`;
-            const res = await fetch(url);
-            const data = await res.json();
-            $('cw-humidity').textContent = data.hourly.relativehumidity_2m[0] + '%';
+            const res = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=relativehumidity_2m&timezone=${encodeURIComponent(tz)}&forecast_hours=1`
+                );
+            $('cw-humidity').textContent = (await res.json()).hourly.relativehumidity_2m[0] + '%';
         } catch { $('cw-humidity').textContent = '--'; }
     }
 
     async function fetchForecast(lat, lon, tz) {
-        const url =
-            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=${encodeURIComponent(tz)}&forecast_days=7`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('预报数据获取失败');
-        const data = await res.json();
-        const daily = data.daily;
+        const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=${encodeURIComponent(tz)}&forecast_days=7`
+            );
+        if (!res.ok) throw new Error('预报失败');
+        const daily = (await res.json()).daily;
         const labels = daily.time.map(t => {
             const d = new Date(t + 'T00:00:00');
-            return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ['日', '一', '二', '三', '四', '五', '六'][d
-                .getDay()];
+            return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
         });
-
         const ctx = $('forecastChart').getContext('2d');
         if (window._fc) window._fc.destroy();
         window._fc = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels,
-                datasets: [{
-                    label: '最高温 °C',
-                    data: daily.temperature_2m_max,
-                    backgroundColor: 'rgba(251,146,60,0.6)',
-                    borderColor: '#fb923c',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    order: 2,
-                }, {
-                    label: '最低温 °C',
-                    data: daily.temperature_2m_min,
-                    backgroundColor: 'rgba(56,189,248,0.6)',
-                    borderColor: '#38bdf8',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    order: 2,
-                }, {
-                    label: '降水 mm',
-                    data: daily.precipitation_sum,
-                    type: 'line',
-                    borderColor: '#60a5fa',
-                    backgroundColor: 'rgba(96,165,250,0.1)',
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#60a5fa',
-                    tension: 0.3,
-                    yAxisID: 'y1',
-                    order: 1,
-                }, ],
+                datasets: [
+                    { label: '最高温 °C', data: daily.temperature_2m_max, backgroundColor: 'rgba(251,146,60,0.6)',
+                        borderColor: '#fb923c', borderWidth: 1, borderRadius: 4, order: 2 },
+                    { label: '最低温 °C', data: daily.temperature_2m_min, backgroundColor: 'rgba(56,189,248,0.6)',
+                        borderColor: '#38bdf8', borderWidth: 1, borderRadius: 4, order: 2 },
+                    { label: '降水 mm', data: daily.precipitation_sum, type: 'line', borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96,165,250,0.1)', borderWidth: 2, pointRadius: 3,
+                        pointBackgroundColor: '#60a5fa', tension: 0.3, yAxisID: 'y1', order: 1 },
+                ],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { color: '#94a3b8', usePointStyle: true, padding: 16, font: { size: 11 } },
-                    },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        titleColor: '#e2e8f0',
-                        bodyColor: '#cbd5e1',
-                        callbacks: {
-                            label(ctx) {
-                                if (ctx.dataset.yAxisID === 'y1') return '降水量: ' + ctx.raw + ' mm';
-                                return ctx.dataset.label.replace(' °C', '') + ': ' + ctx.raw + '°C';
-                            },
-                        },
-                    },
+                    legend: { position: 'top', labels: { color: '#94a3b8', usePointStyle: true, padding: 16,
+                            font: { size: 11 } } },
+                    tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
+                        titleColor: '#e2e8f0', bodyColor: '#cbd5e1', callbacks: { label(ctx) { return ctx.dataset
+                                .yAxisID === 'y1' ? '降水量: ' + ctx.raw + ' mm' : ctx.dataset.label.replace(
+                                    ' °C', '') + ': ' + ctx.raw + '°C'; } } },
                 },
                 scales: {
-                    x: {
-                        ticks: { color: '#94a3b8', font: { size: 10 } },
-                        grid: { color: 'rgba(148,163,184,0.08)' },
-                    },
-                    y: {
-                        type: 'linear',
-                        position: 'left',
-                        title: { display: true, text: '°C', color: '#94a3b8', font: { size: 10 } },
-                        ticks: { color: '#94a3b8', callback: v => v + '°' },
-                        grid: { color: 'rgba(148,163,184,0.08)' },
-                    },
-                    y1: {
-                        type: 'linear',
-                        position: 'right',
-                        title: { display: true, text: 'mm', color: '#94a3b8', font: { size: 10 } },
-                        ticks: { color: '#94a3b8' },
-                        grid: { display: false },
-                        min: 0,
-                    },
+                    x: { ticks: { color: '#94a3b8', font: { size: 10 } },
+                    grid: { color: 'rgba(148,163,184,0.08)' } },
+                    y: { type: 'linear', position: 'left', title: { display: true, text: '°C', color: '#94a3b8',
+                            font: { size: 10 } }, ticks: { color: '#94a3b8', callback: v => v + '°' },
+                    grid: { color: 'rgba(148,163,184,0.08)' } },
+                    y1: { type: 'linear', position: 'right', title: { display: true, text: 'mm', color: '#94a3b8',
+                            font: { size: 10 } }, ticks: { color: '#94a3b8' }, grid: { display: false },
+                        min: 0 },
                 },
             },
         });
     }
 
-    // ==================== 刷新 ====================
-    async function refreshWeather() {
-        if (state.lat === null) return;
-        setStatus('🔄 刷新中...');
-        try {
-            await Promise.all([
-                fetchCurrentWeather(state.lat, state.lon, state.timezone),
-                fetchHumidity(state.lat, state.lon, state.timezone),
-                fetchForecast(state.lat, state.lon, state.timezone),
-            ]);
-            const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-            setStatus('✅ 刷新完成 · ' + now);
-            $('refreshBtn').textContent = '✅';
-            setTimeout(() => { $('refreshBtn').textContent = '🔄 刷新'; }, 1500);
-            setTimeout(() => setStatus(''), 3000);
-        } catch (err) {
-            setStatus('⚠️ 刷新失败');
-            console.error(err);
-        }
+    // ==================== 分钟级降水（彩云 API） ====================
+    async function fetchMinutelyRain(lat, lon) {
+        // 彩云 API：经度在前，纬度在后
+        const url = `https://api.caiyunapp.com/v2.5/TAkhjf8d1nlSlspN/${lon},${lat}/minutely.json`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('彩云API请求失败');
+        const data = await res.json();
+        if (data.status !== 'ok') throw new Error('彩云API: ' + (data.error || '未知错误'));
+        return data.result.minutely;
     }
 
-    // ==================== 主流程 ====================
-    async function loadCity(query) {
-        if (!query || !query.trim()) return;
-        const q = query.trim();
-        showLoading(true);
-        setStatus('🔍 搜索：' + q + ' ...');
+    function renderRainChart(minutely) {
+        const desc = minutely.description || '—';
+        const precip = minutely.precipitation || [];
+        const prob = minutely.probability || [];
 
-        try {
-            const geo = await geocode(q);
-            state.lat = geo.lat;
-            state.lon = geo.lon;
-            state.cityName = geo.name;
-            state.fullLocation = geo.fullLocation;
-            state.timezone = geo.timezone;
-            state.isDistrict = geo.isDistrict;
+        // 更新文字描述
+        $('rainDesc').textContent = desc;
+        $('rainSub').textContent = precip.length > 0 ?
+            `未来 ${precip.length} 分钟逐分钟预测 · 数据源：彩云天气` :
+            '';
 
-            $('locationTag').textContent = geo.fullLocation;
-            $('cw-city').textContent = geo.fullLocation;
-            document.title = geo.name + ' 天气仪表盘';
-
-            setStatus('⏳ 加载面板与天气数据...');
-
-            // 并行：更新嵌入面板 + 获取天气
-            updateEmbeds(geo.lat, geo.lon, geo.isDistrict);
-            await Promise.all([
-                fetchCurrentWeather(geo.lat, geo.lon, geo.timezone),
-                fetchHumidity(geo.lat, geo.lon, geo.timezone),
-                fetchForecast(geo.lat, geo.lon, geo.timezone),
-            ]);
-
-            setStatus('✅ ' + geo.fullLocation + ' · 完成');
-            setTimeout(() => setStatus(''), 3000);
-            saveRecent(q);
-        } catch (err) {
-            console.error(err);
-            setStatus('❌ ' + err.message);
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    function saveRecent(query) {
-        try {
-            let recents = JSON.parse(localStorage.getItem('weather_recent') || '[]');
-            recents = [query, ...recents.filter(r => r !== query)].slice(0, 10);
-            localStorage.setItem('weather_recent', JSON.stringify(recents));
-        } catch {}
-    }
-
-    function loadLastCity() {
-        try { return JSON.parse(localStorage.getItem('weather_recent') || '[]')[0] || '长沙'; } catch {
-            return '长沙';
-        }
-    }
-
-    function showLoading(s) { $('loadingOverlay').classList.toggle('active', s); }
-
-    function setStatus(m) { $('statusMsg').textContent = m; }
-
-    // ==================== 事件 ====================
-    $('searchBtn').addEventListener('click', () => loadCity($('searchInput').value));
-    $('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadCity($('searchInput')
-    .value); });
-    $('refreshBtn').addEventListener('click', refreshWeather);
-
-    // ==================== 初始化 ====================
-    const initCity = loadLastCity();
-    $('searchInput').value = initCity;
-    loadCity(initCity);
-
-    // 15分钟自动刷新
-    setInterval(() => {
-        if (state.lat !== null) {
-            setStatus('🔄 自动刷新...');
-            Promise.all([
-                fetchCurrentWeather(state.lat, state.lon, state.timezone),
-                fetchHumidity(state.lat, state.lon, state.timezone),
-                fetchForecast(state.lat, state.lon, state.timezone),
-            ]).then(() => {
-                const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-                setStatus('✅ 自动刷新 · ' + now);
-                setTimeout(() => setStatus(''), 3000);
-            }).catch(err => {
-                setStatus('⚠️ 自动刷新失败');
-                console.error(err);
-            });
-        }
-    }, 15 * 60 * 1000);
-</script>
-</body>
-</html>
+        // 合并为 5 分钟一组（共 24 组 / 2 小时）
+        const groupSize = 5;
+        const groups = [];
+        const labels = [];
+        const now = new Date();
+        for (let i = 0; i < precip.length; i += groupSize) {
+            const chunk = precip.slice(i, i + groupSize);
+            const maxVal = Math.max(...chunk, 0);
+           
